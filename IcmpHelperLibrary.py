@@ -207,17 +207,28 @@ class IcmpHelperLibrary:
             self.__packHeader()                 # Header is rebuilt to include new checksum value
 
         def __validateIcmpReplyPacketWithOriginalPingData(self, icmpReplyPacket):
-            if (icmpReplyPacket.getIcmpSequenceNumber() == self.getPacketSequenceNumber() and
-                    icmpReplyPacket.getIcmpIdentifier() == self.getPacketIdentifier() and
-                    icmpReplyPacket.getDataRaw() == self.getDataRaw()):
-                # If all values match, set the response as valid
-                icmpReplyPacket.setIsValidResponse(True)
-                icmpReplyPacket.setIcmpSequenceNumber_isValid(True)
-                icmpReplyPacket.setIcmpIdentifier_isValid(True)
-                icmpReplyPacket.setDataRaw_isValid(True)
-                print("All expected and actual values match.")
-            icmpReplyPacket.setIsValidResponse(True)
-            pass
+            sequenceNumberIsValid = (icmpReplyPacket.getPacketSequenceNumber() == self.getPacketSequenceNumber())
+            packetIdentifierIsValid = (icmpReplyPacket.getPacketIdentifier() == self.getPacketIdentifier())
+            rawDataIsValid = (icmpReplyPacket.getDataRaw() == self.getDataRaw())
+
+            icmpReplyPacket.setSequenceNumberIsValid(sequenceNumberIsValid)
+            icmpReplyPacket.setPacketIdentifierIsValid(packetIdentifierIsValid)
+            icmpReplyPacket.setRawDataIsValid(rawDataIsValid)
+
+            isValidResponse = sequenceNumberIsValid and packetIdentifierIsValid and rawDataIsValid
+            icmpReplyPacket.setIsValidResponse(isValidResponse)
+
+            if not isValidResponse:
+                print("Invalid ICMP reply packet:")
+                if not sequenceNumberIsValid:
+                    print("  Expected sequence number: ", self.getPacketSequenceNumber())
+                    print("  Actual sequence number: ", icmpReplyPacket.getPacketSequenceNumber())
+                if not packetIdentifierIsValid:
+                    print("  Expected packet identifier: ", self.getPacketIdentifier())
+                    print("  Actual packet identifier: ", icmpReplyPacket.getPacketIdentifier())
+                if not rawDataIsValid:
+                    print("  Expected raw data: ", self.getDataRaw())
+                    print("  Actual raw data: ", icmpReplyPacket.getDataRaw())
 
         # ############################################################################################################ #
         # IcmpPacket Class Public Functions                                                                            #
@@ -442,17 +453,29 @@ class IcmpHelperLibrary:
         def printResultToConsole(self, ttl, timeReceived, addr):
             bytes = struct.calcsize("d")
             timeSent = struct.unpack("d", self.__recvPacket[28:28 + bytes])[0]
-            print("  TTL=%d    RTT=%.0f ms    Type=%d    Code=%d        Identifier=%d    Sequence Number=%d    %s" %
-                  (
-                      ttl,
-                      (timeReceived - timeSent) * 1000,
-                      self.getIcmpType(),
-                      self.getIcmpCode(),
-                      self.getIcmpIdentifier(),
-                      self.getIcmpSequenceNumber(),
-                      addr[0]
-                  )
-                 )
+            result_str = "  TTL=%d    RTT=%.0f ms    Type=%d    Code=%d    Identifier=%d    Sequence Number=%d    %s" % (
+                ttl,
+                (timeReceived - timeSent) * 1000,
+                self.getIcmpType(),
+                self.getIcmpCode(),
+                self.getIcmpIdentifier(),
+                self.getIcmpSequenceNumber(),
+                addr[0]
+            )
+
+            if not self.getIsValidResponse():
+                result_str += "\nInvalid reply details:"
+                if not self.getIcmpIdentifier_isValid():
+                    result_str += "\nExpected Identifier: %d, Actual Identifier: %d" % (
+                    self.originalIdentifier, self.getIcmpIdentifier())
+                if not self.getIcmpSequenceNumber_isValid():
+                    result_str += "\nExpected Sequence Number: %d, Actual Sequence Number: %d" % (
+                    self.originalSequenceNumber, self.getIcmpSequenceNumber())
+                if not self.getRawData_isValid():
+                    result_str += "\nExpected Raw Data: %s, Actual Raw Data: %s" % (
+                    self.originalRawData, self.getRawData())
+
+            print(result_str)
 
     # ################################################################################################################ #
     # Class IcmpHelperLibrary                                                                                          #
