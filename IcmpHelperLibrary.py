@@ -493,6 +493,23 @@ class IcmpHelperLibrary:
                       addr[0]
                   )
                  )
+            RTT = (timeReceived - timeSent) * 1000
+            self.__RTTs.append(RTT)
+            self.__received_packets += 1
+            if not self.isValidResponse():
+                print("Invalid echo response.")
+
+            if not self.getIcmpIdentifier_isValid():
+                print(f"Invalid ICMP Identifier. Expected: {expected_id}, Received: {self.getIcmpIdentifier()}")
+
+            if not self.getIcmpSequenceNumber_isValid():
+                print(
+                    f"Invalid ICMP Sequence Number. Expected: {expected_sequence}, Received: {self.getIcmpSequenceNumber()}")
+
+            expected_data = ""  # Replace this with the expected data value
+            actual_data = self.getIcmpData()
+            if expected_data != actual_data:
+                print(f"Data mismatch. Expected: {expected_data}, Received: {actual_data}")
 
     # ################################################################################################################ #
     # Class IcmpHelperLibrary                                                                                          #
@@ -510,7 +527,9 @@ class IcmpHelperLibrary:
     #                                                                                                                  #
     # ################################################################################################################ #
     __DEBUG_IcmpHelperLibrary = False                  # Allows for debug output
-
+    __RTTs = []
+    __sent_packets = 0
+    __received_packets = 0
     # ################################################################################################################ #
     # IcmpHelperLibrary Private Functions                                                                              #
     #                                                                                                                  #
@@ -523,6 +542,7 @@ class IcmpHelperLibrary:
 
         for i in range(4):
             # Build packet
+            self.__sent_packets += 1
             icmpPacket = IcmpHelperLibrary.IcmpPacket()
 
             randomIdentifier = (os.getpid() & 0xffff)      # Get as 16 bit number - Limit based on ICMP header standards
@@ -553,6 +573,8 @@ class IcmpHelperLibrary:
     def sendPing(self, targetHost):
         print("ping Started...") if self.__DEBUG_IcmpHelperLibrary else 0
         self.__sendIcmpEchoRequest(targetHost)
+        print("Min RTT = %.0f ms, Max RTT = %.0f ms, Avg RTT = %.0f ms" % (min(self.__RTTs), max(self.__RTTs), sum(self.__RTTs) / len(self.__RTTs)))
+        print("Packet Loss Rate = %.2f%%" % ((self.__sent_packets - self.__received_packets) / self.__sent_packets * 100))
 
     def traceRoute(self, targetHost):
         print("traceRoute Started...") if self.__DEBUG_IcmpHelperLibrary else 0
