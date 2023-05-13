@@ -208,10 +208,9 @@ class IcmpHelperLibrary:
 
         def __validateIcmpReplyPacketWithOriginalPingData(self, icmpReplyPacket):
             # Get the original packet data
-            original_packet = self.__icmpPacket
-            sequence_number_original = original_packet.getIcmpSequenceNumber()
-            packet_id_original = original_packet.getIcmpIdentifier()
-            raw_data_original = original_packet.getIcmpData()
+            sequence_number_original = self.getPacketSequenceNumber()
+            packet_id_original = self.getPacketIdentifier()
+            raw_data_original = self.getDataRaw()
 
             # Get the reply packet data
             sequence_number_reply = icmpReplyPacket.getIcmpSequenceNumber()
