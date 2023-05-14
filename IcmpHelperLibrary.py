@@ -479,6 +479,7 @@ class IcmpHelperLibrary:
         #                                                                                                              #
         #                                                                                                              #
         # ############################################################################################################ #
+
         def printResultToConsole(self, ttl, timeReceived, addr):
             bytes = struct.calcsize("d")
             timeSent = struct.unpack("d", self.__recvPacket[28:28 + bytes])[0]
@@ -515,7 +516,10 @@ class IcmpHelperLibrary:
     #                                                                                                                  #
     #                                                                                                                  #
     # ################################################################################################################ #
-
+    def __init__(self):
+        self.__rtts = []
+        self.__sent = 0
+        self.__received = 0
     # ################################################################################################################ #
     # IcmpHelperLibrary Class Scope Variables                                                                          #
     #                                                                                                                  #
@@ -537,6 +541,7 @@ class IcmpHelperLibrary:
 
         for i in range(4):
             # Build packet
+            self.__sent += 1
             icmpPacket = IcmpHelperLibrary.IcmpPacket()
 
             randomIdentifier = (os.getpid() & 0xffff)      # Get as 16 bit number - Limit based on ICMP header standards
@@ -553,6 +558,12 @@ class IcmpHelperLibrary:
             icmpPacket.printIcmpPacket_hex() if self.__DEBUG_IcmpHelperLibrary else 0
             # we should be confirming values are correct, such as identifier and sequence number and data
 
+            bytes = struct.calcsize("d")
+            timeSent = struct.unpack("d", icmpPacket.recvPacket[28:28 + bytes])[0]
+            rtt = (timeReceived - timeSent) * 1000
+            self.__rtts.append(rtt)
+            self.__received += 1
+
     def __sendIcmpTraceRoute(self, host):
         print("sendIcmpTraceRoute Started...") if self.__DEBUG_IcmpHelperLibrary else 0
         # Build code for trace route here
@@ -564,9 +575,17 @@ class IcmpHelperLibrary:
     #                                                                                                                  #
     #                                                                                                                  #
     # ################################################################################################################ #
+    def printStats(self):
+        print("\n--- ping statistics ---")
+        print(
+            f"{self.__sent} packets transmitted, {self.__received} packets received, {100.0 * (self.__sent - self.__received) / self.__sent}% packet loss")
+        print(
+            f"rtt min/avg/max = {min(self.__rtts):.1f}/{sum(self.__rtts) / len(self.__rtts):.1f}/{max(self.__rtts):.1f} ms")
+
     def sendPing(self, targetHost):
         print("ping Started...") if self.__DEBUG_IcmpHelperLibrary else 0
         self.__sendIcmpEchoRequest(targetHost)
+        self.printStats()
 
     def traceRoute(self, targetHost):
         print("traceRoute Started...") if self.__DEBUG_IcmpHelperLibrary else 0
